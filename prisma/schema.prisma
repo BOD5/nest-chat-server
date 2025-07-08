@@ -1,0 +1,77 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  userName     String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  sentEvents   ChatEvent[]   @relation("Sender")
+  eventStatus  EventStatus[]
+  participants Participant[]
+}
+
+model Chat {
+  id           String        @id @default(uuid())
+  createdAt    DateTime      @default(now())
+  events       ChatEvent[]
+  participants Participant[]
+}
+
+model Participant {
+  chat     Chat     @relation(fields: [chatId], references: [id])
+  chatId   String
+  user     User     @relation(fields: [userId], references: [id])
+  userId   String
+  joinedAt DateTime @default(now())
+
+  @@id([chatId, userId])
+}
+
+model ChatEvent {
+  id        String        @id @default(uuid())
+  chat      Chat          @relation(fields: [chatId], references: [id])
+  chatId    String
+  sender    User          @relation("Sender", fields: [senderId], references: [id])
+  senderId  String
+  type      EventType
+  payload   Json
+  createdAt DateTime      @default(now())
+  statuses  EventStatus[]
+}
+
+model EventStatus {
+  id          String   @id @default(uuid())
+  event       ChatEvent @relation(fields: [eventId], references: [id])
+  eventId     String
+  recipient   User     @relation(fields: [recipientId], references: [id])
+  recipientId String
+  status      Status
+  updatedAt   DateTime @updatedAt
+
+  @@unique([eventId, recipientId])
+}
+
+enum EventType {
+  TEXT_MESSAGE
+  IMAGE_MESSAGE
+  CALL_STARTED
+  CALL_ENDED
+}
+
+enum Status {
+  DELIVERED
+  READ
+}
